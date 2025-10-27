@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[oc]
+.pytest_cache
+*.egg-info
+build/
+dist/
+wheels/
+
+# Virtual environments
+.venv
+.env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Logs and temporary files
+logs/
+*.log
+*.tmp
+test_results.txt
+
+# External projects and temporary folders
+claude-code-router/
+llms/
+packets_docs/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation (will be copied separately if needed)
+docs/
+*.md
+
+# Test files (optional, comment out if you want to include tests)
+test_*.py
+
+# Development files
+.python-version

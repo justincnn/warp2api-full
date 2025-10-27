@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # 单容器双服务模式 (推荐)
+  warp2api:
+    image: warp2api
+    container_name: warp2api
+    ports:
+      #- "8000:8000"  # Protobuf 桥接服务器
+      - "48010:8010"  # 多格式 API 服务器
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8010
+      - BRIDGE_BASE_URL=http://localhost:8001
+      # 账号池-only 模式配置（指向外部或同机运行的 pool_service）
+      - POOL_SERVICE_BASE_URL=http://host.docker.internal:8019
+      # - POOL_SERVICE_API_KEY=${POOL_SERVICE_API_KEY}
+    volumes:
+      - ./logs:/app/logs  # 日志持久化
+    restart: unless-stopped
+      # healthcheck:
+      #   test: ["CMD", "curl", "-f", "http://localhost:8000/healthz", "&&", "curl", "-f", "http://localhost:8010/healthz"]
+      #   interval: 30s
+      #   timeout: 10s
+      #   retries: 3
+      #   start_period: 30s
+    command: ["both"]

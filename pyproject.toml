@@ -1,0 +1,52 @@
+[project]
+name = "warp2api"
+version = "1.0.0"
+description = "Warp AI 双API桥接服务 - 同时支持 OpenAI Chat Completions 和 Anthropic Messages API"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+    {name = "Warp2Api Team"},
+]
+keywords = ["warp", "openai", "anthropic", "api", "bridge", "ai"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "fastapi[standard]>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx[http2]>=0.25.0",
+    "protobuf>=4.24.0",
+    "grpcio-tools>=1.59.0",
+    "python-dotenv>=1.0.0",
+    "websockets>=15.0.1",
+    "requests>=2.32.5",
+    "openai>=1.106.0",
+    "pydantic>=2.4.0",
+    "bbpb>=1.4.2", # Provides blackboxprotobuf functionality
+    "tiktoken>=0.11.0",
+]
+
+[project.optional-dependencies]
+cloudflare = [
+    "cloudflare>=2.19.0",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+]
+
+[project.scripts]
+warp-server = "server:main"
+warp-api = "openai_compat:main"
+
+[[tool.uv.index]]
+url = "https://mirrors.ustc.edu.cn/pypi/simple"
+default = true

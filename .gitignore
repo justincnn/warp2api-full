@@ -1,0 +1,41 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+logs/
+packets_docs/
+test_results.txt
+*.tmp
+
+# External projects
+claude-code-router/
+llms/
+/warp-res/
+
+# External dependencies
+blackboxprotobuf/
+
+# Test and debug tools
+tools/
+
+# Log and output files
+*.jsonl
+openai_formatted_events.jsonl
+
+# Project documentation (not ready for commit)
+PROJECT_DOCUMENTATION.md
