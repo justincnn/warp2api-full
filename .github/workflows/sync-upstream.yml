@@ -1,4 +1,4 @@
-name: Sync with Upstream
+name: Sync Fork with Upstream
 
 on:
   schedule:
@@ -6,19 +6,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync:
+  sync_fork:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # A personal access token with repo scope is required
-          # to be able to push changes back to the repository.
-          token: ${{ secrets.GH_PAT }}
+          # We need to fetch all history and branches
+          fetch-depth: 0
 
-      - name: Sync with Upstream
-        run: |
-          git remote add upstream https://github.com/mucsbr/warp2api-full
-          git fetch upstream
-          git merge upstream/main
-          git push
+      - name: Set up remote
+        run: git remote add upstream https://github.com/mucsbr/warp2api-full.git
+
+      - name: Fetch upstream
+        run: git fetch upstream
+
+      - name: Create Pull Request if changes exist
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          # The token is automatically provided by GitHub
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync with upstream repository"
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          signoff: false
+          branch: upstream-sync
+          base: main
+          delete-branch: true
+          title: 'chore: Sync with upstream'
+          body: |
+            This PR is auto-generated to sync this fork with the upstream repository.
+            
+            Upstream: `https://github.com/mucsbr/warp2api-full`
+          labels: |
+            automated-pr
+            maintenance
+          draft: false
