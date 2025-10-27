@@ -23,6 +23,13 @@ error() {
     echo -e "${RED}[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $1${NC}"
 }
 
+# 修复日志目录权限
+# 确保 warp 用户可以写入挂载的卷
+if [ -d "/app/logs" ]; then
+   log "正在修复 /app/logs 目录权限..."
+   chown -R warp:warp /app/logs
+fi
+
 # 等待服务就绪
 wait_for_service() {
     local url=$1
