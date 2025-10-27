@@ -11,10 +11,12 @@
   - 用于客户端应用程序的多格式 API 服务器
 - **自动格式转换**: OpenAI ↔ Anthropic 格式自动双向转换
 - **智能 Token 管理**:
-  - **Token 池**: 维护 2-3 个预备 token，实现无缝切换
-  - **自动刷新**: 后台异步刷新过期 token
+  - **匿名访问**: 无需预配置，程序自动获取匿名访问令牌（50次调用额度）
+  - **Token 池**: 维护 2-3 个预备 token，支持无缝切换和自动补充
+  - **多层级获取方案**: Token池 → 多账号服务 → 单账号Cloudflare Worker → 直接请求
+  - **自动刷新**: 后台异步刷新过期 token，智能预测和预备
   - **429 错误处理**: 遇到速率限制自动切换备用 token，不中断对话
-  - **Cloudflare Worker 集成**: 利用 CF 分布式 IP 池突破 IP 限制
+  - **多账号轮换**: 支持多账号池化，提高成功率和并发能力
 - **JWT 认证**: Warp 服务的自动令牌管理和刷新
 - **双格式流式支持**: 兼容 OpenAI 和 Anthropic 的 SSE 流式响应格式
 - **WebSocket 监控**: 内置监控和调试功能
@@ -75,13 +77,21 @@
    pip install -e .
    ```
 
-3. **配置匿名JWT TOKEN:**
-   这一步可以什么都不做，程序会自行请求匿名JWT TOKEN
+3. **配置JWT TOKEN (可选):**
+   **推荐**: 无需任何配置，程序会自动获取匿名访问令牌（50次调用额度）
 
-   当然你也可以创建一个包含您的 Warp 凭证的 `.env` 文件，用自己的订阅额度，不过这并不推荐:
+   **可选**: 如果您有自己的Warp订阅账号，可以配置以下环境变量:
    ```env
+   # 方式一：使用自己的JWT和刷新令牌
    WARP_JWT=your_jwt_token_here
    WARP_REFRESH_TOKEN=your_refresh_token_here
+
+   # 方式二：使用Cloudflare Worker部署获取更多额度（推荐用于生产）
+   CLOUDFLARE_API_TOKEN=your_cf_api_token
+   CLOUDFLARE_ACCOUNT_ID=your_cf_account_id
+
+   # 方式三：使用多账号池服务（最高成功率）
+   POOL_SERVICE_BASE_URL=https://your-pool-service.com
    ```
 
 ## 🎯 使用方法
@@ -203,23 +213,61 @@ for line in response.iter_lines():
 
 ### 环境变量
 
+#### Token 配置（可选 - 按优先级排序）
+
+| 变量 | 描述 | 优先级 | 说明 |
+|------|------|--------|------|
+| `POOL_SERVICE_BASE_URL` | 账号池服务 URL | 1 | 多账号池服务，最高成功率 |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token | 2 | 单账号 Cloudflare Worker 服务 |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID | 2 | 需与 API Token 配合使用 |
+| `WARP_JWT` | Warp 认证 JWT 令牌 | 3 | 使用您自己的订阅额度 |
+| `WARP_REFRESH_TOKEN` | JWT 刷新令牌 | 3 | 与 WARP_JWT 配合使用 |
+| **无配置** | **匿名访问** | **默认** | 自动获取（50次调用额度） |
+
+#### 服务器配置
+
 | 变量 | 描述 | 默认值 |
 |------|------|--------|
-| `WARP_JWT` | Warp 认证 JWT 令牌 | 自动获取匿名 token |
-| `WARP_REFRESH_TOKEN` | JWT 刷新令牌 | 自动获取 |
 | `HOST` | 服务器主机地址 | `127.0.0.1` |
 | `PORT` | 多格式 API 服务器端口 | `8010` |
 | `BRIDGE_BASE_URL` | Protobuf 桥接服务器 URL | `http://localhost:8000` |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API 令牌（可选） | 无 |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID（可选） | 无 |
 
-### Token 池配置
+### Token 池系统
 
-当配置了 Cloudflare 凭证时，系统会自动启用 Token 池功能：
-- 维护 2-3 个有效 token
-- 自动在后台刷新 token
-- 遇到 429 错误自动切换
-- 利用 Cloudflare Worker 分布式 IP 池
+#### 工作原理
+
+系统采用**多层级 Token 获取机制**，按以下优先级自动选择最佳方案：
+
+1. **账号池服务** (最高优先级)
+   - 需配置 `POOL_SERVICE_BASE_URL`
+   - 支持多账号轮换，最大化成功率
+
+2. **Cloudflare Worker 服务** (推荐生产使用)
+   - 需配置 `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`
+   - 维护 2-3 个有效 token 池
+   - 利用 CF 分布式 IP 池突破限制
+
+3. **单账号模式** (向后兼容)
+   - 自动回退方案
+   - 适合低并发场景
+
+4. **匿名访问** (默认，无需配置)
+   - 自动获取匿名令牌
+   - 50次调用额度，适合测试
+
+#### 核心特性
+
+- **智能池管理**: 维护 2-3 个预备 token，后台自动补充
+- **无缝切换**: 遇到 429 错误时 0 延迟切换备用 token
+- **健康监控**: 每 30 秒检查池状态，低于 50% 立即补充
+- **紧急机制**: 池空时触发紧急获取，确保服务不中断
+- **统计追踪**: 记录请求次数、切换成功率等指标
+
+#### 使用建议
+
+- **开发测试**: 无需配置，使用匿名访问
+- **生产部署**: 配置 Cloudflare Worker 或账号池服务
+- **高并发场景**: 使用多账号池服务获得最佳性能
 
 ### 项目脚本
 
@@ -317,20 +365,57 @@ Warp2Api/
 
 ### 常见问题
 
-1. **JWT 令牌过期**
-   - 服务会自动刷新令牌
-   - 检查日志中的认证错误
-   - 验证 `WARP_REFRESH_TOKEN` 是否有效
+1. **匿名访问额度用完 (50次限制)**
+   - **解决方案**: 配置 Cloudflare Worker 或多账号池服务
+   - 检查日志中的 `anonymous` 关键词确认当前模式
+   - 参考 `CLOUDFLARE_SETUP.md` 配置 Cloudflare Worker
 
-2. **桥接服务器未就绪**
+2. **JWT 令牌过期**
+   - 服务会自动刷新令牌
+   - 检查日志中的认证错误和 token 相关信息
+   - 验证 `WARP_REFRESH_TOKEN` 是否有效（如使用了自定义token）
+   - 观察 token 池状态：`pool_stats` 字段显示当前池健康度
+
+3. **429 错误频发**
+   - 系统会自动切换到备用 token
+   - 检查 `tokens_created` 和 `successful_switches` 统计
+   - 建议配置多账号池或增加 Cloudflare Worker 部署
+
+4. **Token 池获取失败**
+   - 按优先级检查配置：POOL_SERVICE → Cloudflare → 自定义JWT
+   - 验证 Cloudflare API Token 和 Account ID 是否正确
+   - 查看日志中的 `acquire_fresh_token` 错误信息
+   - 系统会自动回退到匿名访问
+
+5. **桥接服务器未就绪**
    - 确保首先运行 protobuf 桥接服务器
    - 检查 `BRIDGE_BASE_URL` 配置
    - 验证端口可用性
+   - 检查 `server.py` 日志确认启动状态
 
-3. **连接错误**
+6. **连接错误**
    - 检查到 Warp 服务的网络连接
    - 验证防火墙设置
    - 如适用，检查代理配置
+   - 确认 token 有效且未过期
+
+### 日志分析
+
+**Token 相关日志关键词**:
+- `Token 池`: 查看池状态和大小
+- `anonymous`: 确认匿名访问模式
+- `429`: 速率限制发生次数
+- `successful_switches`: 成功切换次数
+- `acquire_fresh_token`: 新 token 获取
+- `pool health`: 池健康度检查
+
+**示例日志**:
+```
+INFO - Token 池启动成功，当前池大小: 3
+INFO - 成功切换到备用 token
+WARNING - Token 遇到 429，标记为受限
+INFO - Token 池健康 (有效: 3/3)
+```
 
 ### 日志记录
 
