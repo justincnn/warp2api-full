@@ -1,0 +1,24 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs every day at midnight
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # A personal access token with repo scope is required
+          # to be able to push changes back to the repository.
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Sync with Upstream
+        run: |
+          git remote add upstream https://github.com/mucsbr/warp2api-full
+          git fetch upstream
+          git merge upstream/main
+          git push

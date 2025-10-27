@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # 单容器双服务模式 (推荐)
   warp2api:
-    image: warp2api
+    image: justincnn/warp2api
     container_name: warp2api
     ports:
       #- "8000:8000"  # Protobuf 桥接服务器
