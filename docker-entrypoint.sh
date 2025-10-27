@@ -58,7 +58,7 @@ wait_for_service() {
 start_bridge_server() {
     log "启动 Protobuf 桥接服务器 (端口 8001)..."
     cd /app
-    exec uv run python server.py
+    exec su -s /bin/bash -c "uv run python server.py" warp
 }
 
 # 启动 API 服务器
@@ -72,7 +72,7 @@ start_api_server() {
     fi
 
     cd /app
-    exec uv run python openai_compat.py
+    exec su -s /bin/bash -c "uv run python openai_compat.py" warp
 }
 
 # 启动双服务器
@@ -81,7 +81,7 @@ start_both_servers() {
 
     # 后台启动桥接服务器
     log "后台启动 Protobuf 桥接服务器..."
-    uv run python server.py &
+    su -s /bin/bash -c "uv run python server.py" warp &
     BRIDGE_PID=$!
 
     # 等待桥接服务器就绪
@@ -93,7 +93,7 @@ start_both_servers() {
 
     # 启动API服务器 (前台)
     log "启动多格式 API 服务器..."
-    uv run python openai_compat.py &
+    su -s /bin/bash -c "uv run python openai_compat.py" warp &
     API_PID=$!
 
     # 等待API服务器就绪

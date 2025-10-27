@@ -55,7 +55,6 @@ RUN useradd --create-home --shell /bin/bash --uid 1000 warp && \
     mkdir -p logs && \
     chown -R warp:warp /app
 
-USER warp
 
 # 暴露端口
 EXPOSE 8000 8010
